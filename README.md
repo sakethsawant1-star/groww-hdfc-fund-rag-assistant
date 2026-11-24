@@ -87,7 +87,7 @@ The server starts instantly on **`http://localhost:3000`** (and backup port **`8
 
 ### Or with Python FastAPI
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 python -m uvicorn phase5_stitch_ui.api:app --reload --port 8000
 ```
 Open **`http://localhost:8000`** in your browser.
