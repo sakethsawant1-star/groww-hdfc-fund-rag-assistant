@@ -1,0 +1,23 @@
+{
+  "name": "groww-hdfc-fund-rag-assistant",
+  "version": "1.0.0",
+  "description": "Zero-Hallucination Factual RAG Assistant for HDFC Mutual Funds on Groww with SEBI Compliance Guardrails",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test_rag_engine.js",
+    "build": "echo 'Build step complete'"
+  },
+  "keywords": [
+    "rag",
+    "groww",
+    "hdfc",
+    "mutual-funds",
+    "ai-pm",
+    "guardrails",
+    "retrieval-augmented-generation"
+  ],
+  "author": "Saketh Sawant",
+  "license": "MIT"
+}

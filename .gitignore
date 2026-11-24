@@ -25,17 +25,22 @@ env/
 .DS_Store
 Thumbs.db
 
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Stitch extracted themes (dev only)
 stitch_theme/
 stitch_theme_2/
 stitch_theme_3/
 *.zip
 
-# Test output files
+# Logs & temp files
+logs.*.json
+*.log
 test_output.txt
 test_output_utf8.txt
 test_prompt.py
 test_prompt.txt
-
-# NOTE: chroma_db, data, chunks are intentionally TRACKED
-# so GitHub Actions can commit updated vectors back to the repo.

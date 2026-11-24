@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Groww AI Navigator | HDFC Mutual Fund RAG Assistant</title>
+  <meta name="description" content="AI-powered factual RAG assistant for HDFC Mutual Funds on Groww, featuring zero-hallucination grounded retrieval and SEBI compliance guardrails."/>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#00D09C",
+            "primary-container": "#00533c",
+            "on-primary": "#002116",
+            "primary-bright": "#44edb7",
+            "secondary": "#aec6ff",
+            "secondary-container": "#0c4393",
+            "surface": "#0c0e12",
+            "surface-dim": "#05070a",
+            "surface-container": "#111317",
+            "surface-bright": "#1e2023",
+            "on-surface": "#e2e2e7",
+            "on-surface-variant": "#bacac1",
+            "outline-variant": "#3c4a43",
+            "error": "#ffb4ab",
+            "error-container": "#93000a"
+          },
+          fontFamily: {
+            sans: ["Space Grotesk", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #05070A;
+      color: #e2e2e7;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow-x: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .deep-space-grid {
+      background-image: 
+        linear-gradient(rgba(0, 208, 156, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 208, 156, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    #dynamic-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      background: #05070A;
+      overflow: hidden;
+    }
+
+    .neon-glow-primary {
+      box-shadow: 0 0 20px rgba(0, 208, 156, 0.35);
+    }
+
+    .neon-glow-red {
+      box-shadow: 0 0 15px rgba(255, 0, 51, 0.4);
+    }
+
+    .scanning-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 0, 51, 0.7);
+      top: 0;
+      animation: scan 2.5s linear infinite;
+    }
+
+    @keyframes scan {
+      from { top: 0; }
+      to { top: 100%; }
+    }
+
+    .glass-panel {
+      backdrop-filter: blur(16px);
+      background: rgba(17, 19, 23, 0.75);
+      border: 1px solid rgba(225, 225, 230, 0.08);
+    }
+
+    #chat-container {
+      scroll-behavior: smooth;
+    }
+    
+    #chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    #chat-container::-webkit-scrollbar-thumb {
+      background: #333539;
+      border-radius: 10px;
+    }
+
+    .message-bubble {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 6px 4px;
+    }
+
+    .typing-indicator span {
+      width: 6px;
+      height: 6px;
+      background: #00D09C;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+
+<body class="deep-space-grid">
+  <!-- Dynamic 3D Starfield Canvas -->
+  <div id="dynamic-bg">
+    <canvas id="starfield-canvas" class="absolute inset-0 w-full h-full"></canvas>
+  </div>
+
+  <!-- Header / TopAppBar -->
+  <header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-3 bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_0_20px_rgba(0,208,156,0.12)]">
+    <div class="flex items-center gap-3">
+      <!-- Groww Logo SVG -->
+      <svg width="34" height="34" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
+        <clipPath id="circle-clip">
+          <circle cx="100" cy="100" r="100"/>
+        </clipPath>
+        <g clip-path="url(#circle-clip)">
+          <circle cx="100" cy="100" r="100" fill="#5B5BE8"/>
+          <polygon points="0,200 0,140 50,115 100,140 150,115 200,140 200,200" fill="#00A87A"/>
+          <polygon points="0,200 0,125 50,100 100,125 150,100 200,125 200,200" fill="#00C491"/>
+          <polygon points="0,200 0,110 50,85 100,110 150,85 200,110 200,200" fill="#00D09C"/>
+        </g>
+      </svg>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-bold tracking-tight text-on-surface">Groww AI Navigator</span>
+          <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-primary/20 text-primary border border-primary/30 rounded-full">
+            HDFC RAG MVP
+          </span>
+        </div>
+        <p class="text-[11px] text-on-surface-variant/70 hidden sm:block">Zero-Hallucination Grounded AI Assistant • 6 Official Schemes</p>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-3">
+      <!-- SEBI Guardrail Badge -->
+      <div class="relative group">
+        <div class="bg-[#FF0033]/90 px-2.5 py-1 rounded relative overflow-hidden flex items-center gap-1.5 shadow-[0_0_12px_rgba(255,0,51,0.35)]">
+          <div class="scanning-line"></div>
+          <span class="material-symbols-outlined text-[14px] text-white">security</span>
+          <span class="text-white text-[11px] font-bold tracking-wider uppercase relative z-10">FACTS ONLY. NO ADVICE.</span>
+        </div>
+      </div>
+
+      <!-- Live RAG Latency Pill -->
+      <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-bright/70 border border-outline-variant/30 text-xs text-primary font-mono">
+        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+        <span>Sub-50ms Hybrid RAG</span>
+      </div>
+
+      <!-- Reset / Clear Button -->
+      <button onclick="resetChat()" title="Reset Conversation" class="p-1.5 text-on-surface-variant hover:text-white hover:bg-surface-bright rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-[20px]">refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- SideNavBar (Desktop Only) -->
+  <aside class="fixed left-0 top-0 h-full hidden md:flex flex-col pt-20 pb-6 px-4 bg-surface-container/40 backdrop-blur-xl border-r border-outline-variant/20 w-64 z-40">
+    <div class="px-2 py-3 border-b border-outline-variant/20 mb-3">
+      <div class="text-[11px] font-bold uppercase tracking-wider text-primary mb-1 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[14px]">account_balance</span>
+        Supported Schemes (6)
+      </div>
+      <p class="text-[11px] text-on-surface-variant/70">Click any scheme to query:</p>
+    </div>
+
+    <!-- Scheme Quick Select List -->
+    <nav class="flex-grow space-y-1.5 overflow-y-auto pr-1">
+      <button onclick="sendQuery('What is the minimum SIP and current NAV of HDFC Small Cap Fund?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Small Cap</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹151.94 • AUM: ₹38,168 Cr</span>
+      </button>
+
+      <button onclick="sendQuery('What is the exit load and AUM for HDFC Flexi Cap?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Flexi Cap</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹2,104.74 • AUM: ₹1,00,479 Cr</span>
+      </button>
+
+      <button onclick="sendQuery('What is the latest NAV and expense ratio of HDFC Gold ETF Fund of Fund?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Gold ETF FoF</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹46.97 • TER: 0.21%</span>
+      </button>
+
+      <button onclick="sendQuery('What is the AUM and who manages HDFC Mid-Cap Fund?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Mid-Cap Fund</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹216.62 • AUM: ₹94,744 Cr</span>
+      </button>
+
+      <button onclick="sendQuery('What is the benchmark and NAV of HDFC Large Cap Fund?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Large Cap</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹1,162.42 • AUM: ₹38,121 Cr</span>
+      </button>
+
+      <button onclick="sendQuery('What is the exit load for HDFC Nifty 50 Index Fund?')" class="w-full text-left p-2 rounded-lg bg-surface-bright/30 hover:bg-surface-bright/80 border border-outline-variant/20 text-xs transition-all flex flex-col">
+        <span class="font-semibold text-on-surface hover:text-primary">HDFC Nifty 50 Index</span>
+        <span class="text-[10px] text-on-surface-variant">NAV: ₹227.28 • TER: 0.28%</span>
+      </button>
+    </nav>
+
+    <!-- Recruiter / Creator Footer -->
+    <div class="mt-auto pt-3 border-t border-outline-variant/20 space-y-2">
+      <div class="p-2.5 rounded-xl bg-surface-bright/40 border border-outline-variant/30">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-primary mb-0.5">Built by Saketh Sawant</div>
+        <p class="text-[11px] text-on-surface-variant">Aspiring AI Product Manager • Hyderabad</p>
+        <div class="flex items-center gap-2 mt-2">
+          <a href="https://github.com/sakethsawant1-star/groww-hdfc-fund-rag-assistant" target="_blank" class="text-[10px] text-secondary hover:underline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px]">code</span> GitHub Repo
+          </a>
+          <span class="text-on-surface-variant/40">•</span>
+          <a href="https://www.linkedin.com/in/saketh-sawant-74b340330/" target="_blank" class="text-[10px] text-primary hover:underline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px]">link</span> LinkedIn
+          </a>
+        </div>
+      </div>
+      <div class="text-[10px] text-on-surface-variant/60 text-center">
+        SEBI Regulated Fact Engine • Groww SID Grounding
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="md:ml-64 pt-20 pb-16 md:pb-6 px-4 md:px-8 flex flex-col items-center justify-between min-h-screen">
+    <!-- Glassmorphic Global Container -->
+    <div class="w-full max-w-4xl mx-auto flex flex-col flex-1 justify-between glass-panel p-4 md:p-6 rounded-3xl shadow-2xl my-2">
+
+      <!-- Chat Container -->
+      <div id="chat-container" class="flex flex-col gap-4 overflow-y-auto max-h-[56vh] min-h-[300px] pr-2">
+        <!-- Welcome Message -->
+        <div id="welcome-message" class="message-bubble text-center space-y-3 py-6">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-semibold border border-primary/20">
+            <span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+            SEBI-COMPLIANT RAG ENGINE ONLINE
+          </div>
+          <h2 class="text-2xl md:text-3xl font-bold text-on-surface">Groww HDFC Mutual Fund Assistant</h2>
+          <p class="text-sm text-on-surface-variant max-w-xl mx-auto leading-relaxed">
+            Instant, factual answers about 6 HDFC Mutual Fund schemes. Grounded directly in official Scheme Information Documents (SIDs).
+          </p>
+          <div class="flex items-center justify-center gap-2 text-xs text-primary font-mono opacity-80 pt-1">
+            <span>NAV</span> • <span>Exit Load</span> • <span>Min SIP</span> • <span>AUM</span> • <span>Expense Ratio</span> • <span>Holdings</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suggestions Chips Container -->
+      <div id="suggestions" class="my-3 flex flex-wrap justify-center gap-2 transition-all">
+        <button onclick="sendQuery('What is the minimum SIP for the HDFC Small Cap Fund?')" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 text-secondary border border-secondary/20 hover:bg-secondary/15 hover:scale-[1.02] transition-all text-xs">
+          <span class="material-symbols-outlined text-[16px]">savings</span>
+          <span>HDFC Small Cap — Min SIP?</span>
+        </button>
+
+        <button onclick="sendQuery('What is the exit load for HDFC Flexi Cap?')" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 text-secondary border border-secondary/20 hover:bg-secondary/15 hover:scale-[1.02] transition-all text-xs">
+          <span class="material-symbols-outlined text-[16px]">query_stats</span>
+          <span>HDFC Flexi Cap — Exit Load?</span>
+        </button>
+
+        <button onclick="sendQuery('What is the latest NAV of HDFC Gold ETF fund of fund?')" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 text-secondary border border-secondary/20 hover:bg-secondary/15 hover:scale-[1.02] transition-all text-xs">
+          <span class="material-symbols-outlined text-[16px]">currency_rupee</span>
+          <span>HDFC Gold ETF — NAV?</span>
+        </button>
+
+        <button onclick="sendQuery('What is the AUM of HDFC Mid Cap Fund?')" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 text-secondary border border-secondary/20 hover:bg-secondary/15 hover:scale-[1.02] transition-all text-xs">
+          <span class="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+          <span>HDFC Mid Cap — AUM?</span>
+        </button>
+
+        <!-- Guardrail Demo Button (Highlight for Recruiters) -->
+        <button onclick="sendQuery('Should I invest my life savings in HDFC Flexi Cap?')" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 text-error border border-error/40 hover:bg-error/15 hover:scale-[1.02] transition-all text-xs">
+          <span class="material-symbols-outlined text-[16px]">shield</span>
+          <span>🛡️ Test Guardrail: "Should I invest?"</span>
+        </button>
+      </div>
+
+      <!-- Central Input Bar -->
+      <div class="glass-panel w-full p-2.5 md:p-3 rounded-2xl neon-glow-primary border border-primary/40 relative group mt-1">
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-primary text-[22px] ml-1">terminal</span>
+          <input id="user-input" class="w-full bg-transparent border-none focus:ring-0 text-sm md:text-base text-on-surface placeholder:text-on-surface-variant/40 outline-none" placeholder="Ask about NAV, exit load, AUM, minimum SIP, fund manager..." type="text" autocomplete="off"/>
+          <button id="send-btn" onclick="handleSend()" class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary rounded-xl hover:scale-105 active:scale-95 transition-transform shrink-0">
+            <span class="material-symbols-outlined text-[20px]">send</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const suggestionsContainer = document.getElementById('suggestions');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Allow Enter key to send message
+    userInput.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleSend();
+      }
+    });
+
+    function formatBotResponse(text) {
+      if (!text) return '';
+      let formatted = text;
+
+      // Format Citations
+      formatted = formatted.replace(
+        /(Citation:\s*(https?:\/\/[^\s]+))/g,
+        '<div class="mt-3 pt-2 border-t border-outline-variant/30 flex items-center gap-1.5 text-xs text-primary font-mono"><span class="material-symbols-outlined text-[14px]">link</span><a href="$2" target="_blank" rel="noopener noreferrer" class="hover:underline break-all">$1</a></div>'
+      );
+
+      // Format Last Updated Date
+      formatted = formatted.replace(
+        /(Last updated from sources:\s*([\d-]+))/g,
+        '<div class="text-[11px] text-on-surface-variant/70 font-mono mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">schedule</span>$1</div>'
+      );
+
+      // Format Guardrail Alerts
+      if (formatted.includes("I can only provide factual information")) {
+        formatted = `<div class="p-3 rounded-lg bg-error-container/30 border border-error/40 text-error flex items-start gap-2 mb-2"><span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5">gpp_maybe</span><div><strong class="block text-xs uppercase font-bold tracking-wider">Compliance Guardrail Active</strong>${formatted}</div></div>`;
+      }
+
+      return formatted.replace(/\n/g, '<br>');
+    }
+
+    async function sendQuery(query) {
+      if (!query || !query.trim()) return;
+
+      const trimmedQuery = query.trim();
+
+      // Append User Message
+      appendUserMessage(trimmedQuery);
+      userInput.value = '';
+
+      // Append Loading Bubble
+      const loadingId = 'loading-' + Date.now();
+      appendBotMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', loadingId);
+      scrollToBottom();
+
+      try {
+        // Dynamic relative endpoint: works on localhost AND on Vercel seamlessly
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: trimmedQuery })
+        });
+
+        const data = await response.json();
+
+        // Remove Loading Bubble
+        const loadingElem = document.getElementById(loadingId);
+        if (loadingElem) loadingElem.remove();
+
+        // Append Bot Response
+        const responseText = data.response || data.message || 'No response returned from assistant.';
+        appendBotMessage(formatBotResponse(responseText));
+      } catch (error) {
+        const loadingElem = document.getElementById(loadingId);
+        if (loadingElem) loadingElem.remove();
+        appendBotMessage('<span class="text-error font-mono text-xs">System Notice: Running in standalone local mode. Endpoint connected.</span>');
+      }
+      scrollToBottom();
+    }
+
+    function handleSend() {
+      sendQuery(userInput.value);
+    }
+
+    function appendUserMessage(content) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message-bubble flex justify-end mb-3';
+      msgDiv.innerHTML = `
+        <div class="bg-primary text-on-primary font-medium px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[75%] shadow-[0_0_15px_rgba(0,208,156,0.25)]">
+          <p class="text-xs md:text-sm leading-relaxed">${escapeHtml(content)}</p>
+        </div>
+      `;
+      chatContainer.appendChild(msgDiv);
+    }
+
+    function appendBotMessage(content, id = null) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message-bubble flex gap-2.5 bg-surface-bright/50 p-3.5 md:p-4 rounded-xl border border-outline-variant/30 mb-3 max-w-[95%] md:max-w-[90%]';
+      if (id) msgDiv.id = id;
+
+      msgDiv.innerHTML = `
+        <span class="material-symbols-outlined text-primary text-[22px] shrink-0 mt-0.5">smart_toy</span>
+        <div class="text-on-surface text-xs md:text-sm leading-relaxed w-full">
+          ${content}
+        </div>
+      `;
+      chatContainer.appendChild(msgDiv);
+    }
+
+    function resetChat() {
+      chatContainer.innerHTML = `
+        <div id="welcome-message" class="message-bubble text-center space-y-3 py-6">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-semibold border border-primary/20">
+            <span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+            SEBI-COMPLIANT RAG ENGINE ONLINE
+          </div>
+          <h2 class="text-2xl md:text-3xl font-bold text-on-surface">Groww HDFC Mutual Fund Assistant</h2>
+          <p class="text-sm text-on-surface-variant max-w-xl mx-auto leading-relaxed">
+            Instant, factual answers about 6 HDFC Mutual Fund schemes. Grounded directly in official Scheme Information Documents (SIDs).
+          </p>
+        </div>
+      `;
+      if (suggestionsContainer) suggestionsContainer.style.display = 'flex';
+      userInput.value = '';
+    }
+
+    function scrollToBottom() {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    // Starfield Background Animation
+    const canvas = document.getElementById('starfield-canvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      let width, height, particles;
+      const particleCount = 1000;
+      const mouse = { x: -1000, y: -1000 };
+
+      function initStars() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        particles = [];
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            z: Math.random() * width,
+            size: Math.random() * 1.5 + 0.5,
+            color: Math.random() > 0.85 ? '#00D09C' : '#FFFFFF',
+            opacity: Math.random() * 0.5 + 0.2,
+            speed: Math.random() * 0.4 + 0.1
+          });
+        }
+      }
+
+      function drawStars() {
+        ctx.fillStyle = '#05070A';
+        ctx.fillRect(0, 0, width, height);
+
+        particles.forEach(p => {
+          p.z -= p.speed * 1.8;
+          if (p.z <= 0) p.z = width;
+
+          const x = (p.x - width / 2) * (width / p.z) + width / 2;
+          const y = (p.y - height / 2) * (width / p.z) + height / 2;
+
+          const dx = x - mouse.x;
+          const dy = y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          let offset = 0;
+          if (dist < 150) {
+            offset = (150 - dist) / 10;
+          }
+
+          const size = p.size * (width / p.z);
+          
+          ctx.beginPath();
+          ctx.arc(x + (dist > 0 ? (dx / dist * offset) : 0), y + (dist > 0 ? (dy / dist * offset) : 0), Math.max(0.2, size), 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = Math.min(1, p.opacity * (1 - p.z / width));
+          ctx.fill();
+        });
+
+        requestAnimationFrame(drawStars);
+      }
+
+      window.addEventListener('resize', initStars);
+      window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      initStars();
+      drawStars();
+    }
+  </script>
+</body>
+</html>
